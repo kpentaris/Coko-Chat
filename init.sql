@@ -1,0 +1,17 @@
+CREATE TABLE Users (ID serial PRIMARY KEY, USERNAME VARCHAR(255) UNIQUE NOT NULL, PROFILEIMG TEXT, ALT VARCHAR(255));
+
+INSERT INTO Users (USERNAME, PROFILEIMG, ALT) VALUES ('Alice', 'images/profiles/alice.jpeg', 'Alice');
+INSERT INTO Users (USERNAME, PROFILEIMG, ALT) VALUES ('Bob', 'images/profiles/bob.jpeg', 'Bob');
+INSERT INTO Users (USERNAME, PROFILEIMG, ALT) VALUES ('Charlie', 'images/profiles/charlie.jpeg', 'Charlie');
+INSERT INTO Users (USERNAME, PROFILEIMG, ALT) VALUES ('Dave', 'images/profiles/dave.jpeg', 'Dave');
+INSERT INTO Users (USERNAME, PROFILEIMG, ALT) VALUES ('Eve', 'images/profiles/eve.jpeg', 'Eve');
+
+CREATE TABLE Messages (
+	ID serial PRIMARY KEY, 
+	MESSAGE_TEXT text NOT NULL, 
+	CREATED_ON TIMESTAMP NOT NULL, 
+	FROM_USER INT NOT NULL,
+	MENTION_USER_ID INT,
+	FOREIGN KEY (FROM_USER) REFERENCES Users (ID), 
+	FOREIGN KEY (MENTION_USER_ID) REFERENCES Users (ID)
+	);
