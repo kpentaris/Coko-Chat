@@ -13,10 +13,10 @@ const server = app.listen(5000, () => {
   console.log('server started in 5000');
 });
 
+// Accept websocket connections
 const wsServer = new ws.Server({ noServer: true });
 wsServer.on('connection', socket => {
   socket.on('message', message => {
-    // do nothing on incoming websocket message
   });
 });
 
@@ -28,14 +28,18 @@ server.on('upgrade', (request, socket, head) => {
 
 // *** API ROUTES *** //
 
+// Keep a cache of the logged users. Normally this mechanism is handled at the DB level or an intermediate cache layer.
+// We only keep the user id in the cache.
 const loggedUsersCache = [];
-// User login
+
+// User login route. Adds the user into the logged users cache.
 app.post('/user/login', async (req, res, next) => {
   try {
     const loginUser = req.body;
     if(loggedUsersCache.indexOf(loginUser.id) > -1) {
       next('Error: User already logged in');
     } else {
+      // If the user is logged in successfully, notify all clients.
       loggedUsersCache.push(loginUser.id);
       wsServer.clients.forEach((client => {
         if(client.readyState === ws.OPEN) {
@@ -49,6 +53,7 @@ app.post('/user/login', async (req, res, next) => {
   }
 });
 
+// User logout. Remove from cache and notify clients
 app.post('/user/logout/:id', async (req, res, next) => {
   try {
     const userId = parseInt(req.params.id);
@@ -66,6 +71,7 @@ app.post('/user/logout/:id', async (req, res, next) => {
   }
 });
 
+// Retrieve all logged users
 app.get('/loggedUsers', async (req, res, next) => {
   try {
     const allUsers = await getAllUsers();
@@ -76,7 +82,7 @@ app.get('/loggedUsers', async (req, res, next) => {
   }
 });
 
-// Get all users
+// Get all available users in the database
 app.get('/users', async (req, res, next) => {
   try {
     const allUsers = await getAllUsers();
@@ -86,24 +92,27 @@ app.get('/users', async (req, res, next) => {
   }
 });
 
-// Post message
+// Post a new message. Also notifies all users
 app.post('/message', async (req, res, next) => {
   try {
     const msg = req.body;
     const dto = fromDTO(msg);
     dto.id = (await insertMessage(dto))[0].id;
+
+    // notify in realtime
     wsServer.clients.forEach((client => {
       if(client.readyState === ws.OPEN) {
         client.send(JSON.stringify(toDTO(dto)));
       }
     }));
+    // return the new message DB generated id to the message sender
     res.json(dto.id);
   } catch (err) {
     next(getError(err));
   }
 });
 
-// Get all messages
+// Get all past messages
 app.get('/messages', async (req, res, next) => {
   try {
     const allMessages = await getMessages();
@@ -115,6 +124,7 @@ app.get('/messages', async (req, res, next) => {
 
 // *** UTILITIES *** //
 
+// Generic error handling method
 function getError(err) {
   if(!!err.message)
     return err.message;

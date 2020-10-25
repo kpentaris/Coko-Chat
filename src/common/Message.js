@@ -19,6 +19,11 @@ function Message(from_user, message_text, created_on, mention_user_id) {
   this.mention_user_id = mention_user_id;
 }
 
+/**
+ * The DTO methods handle date issues that arise when sending the message object from the client to the server.
+ * Zone data is lost and the date ends up getting changed when reloading past messages.
+ */
+
 function fromDTO(msg) {
   const dto = new Message(msg.from_user, msg.message_text, new Date(msg.created_on), msg.mention_user_id);
   dto.id = msg.id;

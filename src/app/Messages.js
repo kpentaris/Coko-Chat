@@ -4,10 +4,15 @@ import {fromDTO, toDTO} from "../common/Message";
 const allMessagesApi = 'http://localhost:5000/messages';
 const sendMessageApi = 'http://localhost:5000/message';
 
+/**
+ * Handles fetching all existing messages of the chatroom.
+ * Exposes and returns a sendMessage and a receiveMessage callback
+ * as API methods.
+ */
 export const useFetchMessages = () => {
   const [messages, setMessages] = useState([]);
 
-  useEffect(() => { // load all available users on first component add
+  useEffect(() => {
     fetch(allMessagesApi)
       .then(response => response.json())
       .then(messagesJson => {

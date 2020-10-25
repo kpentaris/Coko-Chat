@@ -4,6 +4,11 @@ export {
   userLogout
 }
 
+/**
+ * API Methods for communication with the backend service.
+ * Some methods are unused.
+ */
+
 async function userLogin(user) {
   const response = await fetch(`http://localhost:5000/user/login`, {
     method: 'POST',

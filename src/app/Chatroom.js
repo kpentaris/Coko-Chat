@@ -4,6 +4,11 @@ import {useFetchMessages} from "./Messages";
 import {Message} from "../common/Message";
 import {initWebsocketConnection, userLogout} from "./chatroomApi";
 
+/**
+ * Main chatroom component.
+ * Handles loading logged users and existing messages.
+ * Should potentially be broken down into more components.
+ */
 function Chatroom(props) {
   // refs
   const initialized = useRef(false);
@@ -17,8 +22,10 @@ function Chatroom(props) {
 
   allUsersRef.current = allUsers; // reference for socket callbacks
 
+  // initialize once
   if(!initialized.current) {
     window.addEventListener("unload", () => {
+      // uses sendBeacon browser feature to notify for user logout upon unload
       userLogout(props.loggedUser);
     });
 
@@ -26,22 +33,25 @@ function Chatroom(props) {
     initialized.current = true;
   }
 
+  /**
+   * Websocket message receive callback handler.
+   */
   function receiveMessageCB(msg) {
     if(msg.from_user === props.loggedUser.id) {
-      return; // no need to handle own messages received from socket. Server side needs to filter out sending them to their creator
+      return; // no need to handle own messages received from socket. Server side should filter out sending them to their creator.
     }
     const isMention = msg.mention_user_id === props.loggedUser.id;
-    if(isMention) { // message is mention to user. Requires https or localhost
+    if(isMention) { // message is mention to user and should trigger browser notification
       const fromUser = allUsersRef.current[msg.from_user];
-      notifyOnMention(fromUser.username, fromUser.profileimg, msg.message_text.substring(msg.message_text.indexOf(' ') + 1)); // don't display the
-      // mention part in the notif
+      notifyOnMention(fromUser.username, fromUser.profileimg, msg.message_text.substring(msg.message_text.indexOf(' ') + 1)); // don't display the mention part in the notif
     }
-    receiveMessage(msg);
+    receiveMessage(msg); // update message state
   }
 
-  // callbacks
+  // All websocket messages are handled within this function, each with its respective callback.
   function socketCB(sockMsg) {
-    // we check the message type based on the object form but should have better method
+    // we check the message type based on the object form but should move to more explicit method
+
     if(!!sockMsg.username) { // is user login message
       setLoggedUsers(logged => {
         const users = {...logged, [sockMsg.id]: sockMsg};
@@ -49,7 +59,7 @@ function Chatroom(props) {
       });
     } else if(!!sockMsg.message_text) { // is incoming text msg
       receiveMessageCB(sockMsg);
-    } else {
+    } else { // is user logout message
       setLoggedUsers(logged => {
         delete logged[sockMsg];
         const users = {...logged};
@@ -57,6 +67,8 @@ function Chatroom(props) {
       });
     }
   }
+
+  // Clicking on logged user in users left pane automatically sets the '@ <username>' into the message textbox
   function mentionOnClick(mentionUser) {
     if(chatText.current.value.startsWith(`@${mentionUser.username} `)) {
       return;
@@ -66,7 +78,7 @@ function Chatroom(props) {
     chatText.current.value = `@${mentionUser.username} ${chatText.current.value}`;
   }
 
-  // functions
+  // Retrieves a user based on their username from the all users state object.
   function getUserByUsername(username) {
     const user = Object.values(allUsers).filter(user => user.username === username);
     if(!!user) {
@@ -75,6 +87,12 @@ function Chatroom(props) {
     return undefined;
   }
 
+  /**
+   * Message sending callback handler.
+   * Handles normal and mention messages. Doesn't allow self mentioning, treats it as normal message.
+   * Once a message is ready, a Message object is generated and sent to the send message API which
+   * handles sending it to the backend service as well as adding it to the message list.
+   */
   function postMessage(msgText) {
     if(!msgText) {
       return;
@@ -88,15 +106,15 @@ function Chatroom(props) {
     }
     if(mentionUsername === props.loggedUser.username) {
       // can't mention self
-      mentionUsername = undefined; // reset mention
+      mentionUsername = undefined;
     }
 
-    chatText.current.value = ''; // reset message box
+    chatText.current.value = ''; // reset message textbox value
 
     const msgObj = new Message(
-      props.loggedUser.id, // user id must not be determined from client but from server session instead
+      props.loggedUser.id, // user id should not be determined from client but from server session instead
       msgText,
-      new Date(), // date must not be determined from client but from server instead
+      new Date(), // date should not be determined from client but from server instead
       !!mentionUsername ? getUserByUsername(mentionUsername).id : undefined
     );
     sendMessage(msgObj);
@@ -173,6 +191,11 @@ function Chatroom(props) {
   );
 }
 
+/**
+ * Handles native browser notifications.
+ * Must be allowed manually when the browser asks for permission.
+ * Should work in localhost and https.
+ */
 function notifyOnMention(fromUsername, profileImg, notificationText) {
   // check support
   if(!("Notification" in window)) {

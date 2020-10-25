@@ -3,10 +3,13 @@ import {useEffect, useState} from "react";
 const allUsersApi = 'http://localhost:5000/users/';
 const loggedUsersApi = 'http://localhost:5000/loggedUsers/';
 
+/**
+ * Handles fetching all available users.
+ */
 export const useFetchAllUsers = () => {
   const [allUsers, setAllUsers] = useState({});
 
-  useEffect(() => { // load all available users on first component add
+  useEffect(() => {
     fetch(allUsersApi)
       .then(response => response.json())
       .then(json => {
@@ -20,6 +23,9 @@ export const useFetchAllUsers = () => {
   return allUsers;
 };
 
+/**
+ * Handles fetching all logged users.
+ */
 export const useFetchLoggedUsers = (refresh) => {
   const [loggedUsers, setLoggedUsers] = useState({});
 
@@ -39,6 +45,9 @@ export const useFetchLoggedUsers = (refresh) => {
   return [loggedUsers, setLoggedUsers];
 };
 
+/**
+ * Handles filtering out all logged users, keeping the users that are available for login.
+ */
 export const useFetchAvailableUsers = (refresh) => {
   const allUsers = useFetchAllUsers();
   const [loggedUsers] = useFetchLoggedUsers(refresh);
